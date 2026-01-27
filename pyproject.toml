@@ -1,0 +1,12 @@
+[project]
+name = "robustrankaggregpy"
+version = "0.1.0"
+description = "Implementation of the Robust Rank Aggregation R package in Python"
+readme = "README.md"
+authors = [{ name = "Braden Griebel", email = "bgriebel@uw.edu" }]
+requires-python = ">=3.10"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.9.18,<0.10.0"]
+build-backend = "uv_build"
