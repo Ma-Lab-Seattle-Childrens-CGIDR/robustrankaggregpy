@@ -3,11 +3,11 @@ Functions for performing rank aggregation
 """
 
 from functools import reduce
-
-from typing import Hashable, Optional
+from typing import cast, Hashable, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+from scipy import special
 
 
 def create_rank_matrix(
@@ -71,3 +71,95 @@ def create_rank_matrix(
             / total_elems[idx]
         )
     return rank_matrix
+
+
+# region Stuart-Aerts
+# NOTE: This seems to recalculate the factorial for each row, there
+# should be a way to memoize that...
+
+# NOTE: Use scipy.special factorial for calculating the factorial
+# for the whole array rather than applying to the series
+
+
+# # Stuart-Aerts method helper functions
+# sumStuart <- function(v, r) {
+#   k <- length(v) # k is an int
+#   l_k <- 1:k # This is a vector from 1 up to k (inclusive)
+#   ones <- (-1)**(l_k + 1) # Alternating vector of 1,-1,1,-1...
+#   f <- factorial(l_k) # Get the factorial of the vector
+#   p <- r**l_k # r (the rank ratio? for data source i, also probably a vector)
+#   return(ones %*% (rev(v) * p / f))
+# }
+
+# Define some useful Types
+FloatMatrix1D = np.ndarray[Tuple[int], np.dtype[np.float32 | np.float64]]
+FloatMatrix2D = np.ndarray[Tuple[int, int], np.dtype[np.float32 | np.float64]]
+
+
+def sum_stuart(v: FloatMatrix1D, r: float) -> float:
+    """
+    Helper function for Stuart-Aerts method
+
+    Parameters
+    ----------
+    v : 1-D numpy array of floats
+        The array to compute the Stuart-Aerts sum for
+    r : float
+        The rank ratio to compute the Stuart-Aerts sum for
+
+    Returns
+    -------
+    sum
+        The Stuart-Aerts sum of v with rank ratio r
+    """
+    k = len(v)
+    l_k = np.arange(1, k + 1)
+    ones: FloatMatrix1D = (-1) ** (l_k + 1)
+    f: FloatMatrix1D = special.factorial(l_k)
+    p: FloatMatrix1D = cast(FloatMatrix1D, r**l_k)
+    return ones @ (np.flip(v) * p / f)
+
+
+def q_stuart(row: FloatMatrix1D) -> float:
+    """
+    Calculate the Q-statistic for a single row of a matrix
+
+    Parameters
+    ----------
+    row : 1-D numpy NDArray
+        The row to calculate the Q-statistic for
+
+    Returns
+    -------
+    q : float
+        The Q-statistic for the row
+    """
+    # Get the number of non-NaN entries
+    non_na_count: int = np.sum(~np.isnan(row))
+    v: FloatMatrix1D = np.ones((non_na_count + 1,))
+    for k in range(non_na_count):
+        v[k + 1] = sum_stuart(v[0:k], row[non_na_count - k - 1])
+    return special.factorial(non_na_count) * v[non_na_count]
+
+
+def stuart(rank_matrix: FloatMatrix2D):
+    """
+    Compute the Stuart ranks for each row in a 2-D numpy array
+
+    Parameters
+    ----------
+    rank_matrix : 2-D numpy NDArray
+        The rank matrix to compute the Stuart-Aerts ranks for
+
+    Returns
+    -------
+    ranks : 1-D numpy NDArray
+        The ranks of the rows in the rank_matrix
+    """
+    rank_matrix: FloatMatrix2D = cast(
+        FloatMatrix2D, np.apply_along_axis(np.sort, 1, rank_matrix)
+    )
+    return np.apply_along_axis(q_stuart, 1, rank_matrix)
+
+
+# endregion Stuart-Aerts
