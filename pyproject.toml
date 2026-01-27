@@ -5,8 +5,24 @@ description = "Implementation of the Robust Rank Aggregation R package in Python
 readme = "README.md"
 authors = [{ name = "Braden Griebel", email = "bgriebel@uw.edu" }]
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "numpy>=2.2.6",
+    "pandas>=2.3.3",
+    "scipy>=1.15.3",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.18,<0.10.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.14.14",
+    "ty>=0.0.14",
+    "pandas-stubs~=2.3.3",
+    "scipy-stubs>=1.15.3.0",
+]
+docs = [
+    "sphinx>=8.1.3",
+]
