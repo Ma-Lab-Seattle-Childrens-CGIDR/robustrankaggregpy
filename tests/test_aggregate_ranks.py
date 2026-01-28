@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from robustrankaggregpy.aggregate_ranks import (
+    beta_scores,
     create_rank_matrix,
     q_stuart,
     sum_stuart,
@@ -184,3 +185,29 @@ def test_stuart(rank_matrix):
     )
     actual_stuart = stuart(rank_matrix.sort_index().to_numpy())
     np.testing.assert_almost_equal(actual_stuart, expected_stuart)
+
+
+def test_beta_scores():
+    rank_vector_no_na = np.array([5, 2, 3, 6, 1, 4, 7]) / 7
+    rank_vector_na = np.array([np.nan, 5, 2, 3, 6, np.nan, 1, 4, 7]) / 9
+    expected_beta_no_na = np.array(
+        [0.6600833, 0.6395149, 0.6406551, 0.6531001, 0.6792299, 0.7364861, 1.0000000]
+    )
+    expected_beta_na = np.array(
+        [
+            0.5615376,
+            0.4834529,
+            0.4293553,
+            0.3799615,
+            0.3273333,
+            0.2633745,
+            0.1721824,
+            np.nan,
+            np.nan,
+        ]
+    )
+    np.testing.assert_allclose(beta_scores(rank_vector_no_na), expected_beta_no_na)
+    # NOTE: Small floating point difference, increasing tolerance slightly
+    np.testing.assert_allclose(
+        beta_scores(rank_vector_na), expected_beta_na, rtol=1.1e-7
+    )

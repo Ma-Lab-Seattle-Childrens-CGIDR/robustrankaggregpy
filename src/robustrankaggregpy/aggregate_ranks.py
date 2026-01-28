@@ -7,7 +7,7 @@ from typing import cast, Hashable, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from scipy import special
+from scipy import special, stats
 
 
 def create_rank_matrix(
@@ -149,3 +149,32 @@ def stuart(rank_matrix: FloatMatrix2D):
 
 
 # endregion Stuart-Aerts
+
+
+# region RRA
+def beta_scores(rank_vector: FloatMatrix1D) -> FloatMatrix1D:
+    """
+    Calculate beta scores for a normalized rank vector
+
+    Parameters
+    ----------
+    rank_vector : FlaotMatrix1D
+        Vector of normalized ranks (aka rank ratios), should be values in the range [0,1]
+
+    Returns
+    -------
+    scores : FloatMatrix1D
+        p-values calculated using the beta distribution
+    """
+    count: int = np.sum(~np.isnan(rank_vector))
+    pvec: FloatMatrix1D = np.empty(rank_vector.shape, dtype=rank_vector.dtype)
+    pvec.fill(np.nan)
+    sorted_rank_vector: FloatMatrix1D = cast(FloatMatrix1D, np.sort(rank_vector))
+    # Shape parameters for the beta distribution
+    a = np.arange(count) + 1
+    b = np.flip(a)
+    pvec[:count] = stats.beta.cdf(sorted_rank_vector[:count], a, b)
+    return pvec
+
+
+# endregion RRA
