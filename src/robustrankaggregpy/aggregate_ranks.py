@@ -158,7 +158,7 @@ def beta_scores(rank_vector: FloatMatrix1D) -> FloatMatrix1D:
 
     Parameters
     ----------
-    rank_vector : FlaotMatrix1D
+    rank_vector : FloatMatrix1D
         Vector of normalized ranks (aka rank ratios), should be values in the range [0,1]
 
     Returns
@@ -175,6 +175,61 @@ def beta_scores(rank_vector: FloatMatrix1D) -> FloatMatrix1D:
     b = np.flip(a)
     pvec[:count] = stats.beta.cdf(sorted_rank_vector[:count], a, b)
     return pvec
+
+
+def threshold_beta_score(
+    scores: FloatMatrix1D,
+    k: Optional[FloatMatrix1D] = None,
+    n: Optional[int] = None,
+    sigma: Optional[FloatMatrix1D] = None,
+):
+    """
+    Threshold the Beta Scores
+
+    Parameters
+    ----------
+    scores : FloatMatrix1D
+        Beta scores to threshold
+    k : FloatMatrix1D, optional
+    n : int, optional
+    sigma : FloatMatrix1D, optional
+
+    Returns
+    -------
+    FloatMatrix1D
+        The thresholded beta scores
+    """
+    if k is None:
+        k: FloatMatrix1D = np.arange(scores.shape[0], dtype=scores.dtype) + 1
+    if n is None:
+        n = scores.shape[0]
+    if sigma is None:
+        sigma: FloatMatrix1D = np.ones((n,), dtype=scores.dtype)
+
+    # Check the input parameters
+    if len(sigma) != n:
+        raise ValueError(
+            f"Length of Sigma must match n, but sigma length is {len(sigma)}, and n is {n}"
+        )
+    if len(scores) != n:
+        raise ValueError(
+            f"Length of the scores must match n, but scores has length {len(scores)}, and n is {n}"
+        )
+    if np.min(sigma) < 0.0 or np.max(sigma) > 1.0:
+        raise ValueError(
+            f"Elements of sigma must be in rane [0,1], but actual range was [{np.min(sigma)},{np.max(sigma)}]"
+        )
+    if any(~np.isnan(scores) & scores > sigma):
+        raise ValueError("Elements of scores must be smaller than elements of sigma")
+
+    # Get a vector with no NaN
+    x: FloatMatrix1D = cast(FloatMatrix1D, np.sort(scores[~np.isnan(scores)]))
+    # Sort the sigma vector in descending order
+    sigma: FloatMatrix1D = cast(FloatMatrix1D, np.flip(np.sort(sigma)))
+    # Create the thresholded beta vector, filled with NaNs for now
+    beta: FloatMatrix1D = np.empty((len(k)), dtype=scores.dtype)
+    beta.fill(np.nan)
+    _ = x
 
 
 # endregion RRA
