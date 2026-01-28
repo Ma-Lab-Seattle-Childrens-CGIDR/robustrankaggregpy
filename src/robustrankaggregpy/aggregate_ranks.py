@@ -13,7 +13,7 @@ from scipy import special
 def create_rank_matrix(
     rank_lists: list[list[Hashable]],
     total_elems: Optional[int | list[int]] = None,
-    full: bool = True,
+    full: bool = False,
 ) -> pd.DataFrame:
     """
     Create a rank matrix by converting a list of rank lists into a dataframe
@@ -77,20 +77,6 @@ def create_rank_matrix(
 # NOTE: This seems to recalculate the factorial for each row, there
 # should be a way to memoize that...
 
-# NOTE: Use scipy.special factorial for calculating the factorial
-# for the whole array rather than applying to the series
-
-
-# # Stuart-Aerts method helper functions
-# sumStuart <- function(v, r) {
-#   k <- length(v) # k is an int
-#   l_k <- 1:k # This is a vector from 1 up to k (inclusive)
-#   ones <- (-1)**(l_k + 1) # Alternating vector of 1,-1,1,-1...
-#   f <- factorial(l_k) # Get the factorial of the vector
-#   p <- r**l_k # r (the rank ratio? for data source i, also probably a vector)
-#   return(ones %*% (rev(v) * p / f))
-# }
-
 # Define some useful Types
 FloatMatrix1D = np.ndarray[Tuple[int], np.dtype[np.float32 | np.float64]]
 FloatMatrix2D = np.ndarray[Tuple[int, int], np.dtype[np.float32 | np.float64]]
@@ -138,7 +124,7 @@ def q_stuart(row: FloatMatrix1D) -> float:
     non_na_count: int = np.sum(~np.isnan(row))
     v: FloatMatrix1D = np.ones((non_na_count + 1,))
     for k in range(non_na_count):
-        v[k + 1] = sum_stuart(v[0:k], row[non_na_count - k - 1])
+        v[k + 1] = sum_stuart(v[0 : (k + 1)], row[non_na_count - k - 1])
     return special.factorial(non_na_count) * v[non_na_count]
 
 

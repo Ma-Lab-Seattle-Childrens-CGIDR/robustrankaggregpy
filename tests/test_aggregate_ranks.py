@@ -1,15 +1,40 @@
+from typing import cast
+
 import numpy as np
 import pandas as pd
+import pytest
 
-from robustrankaggregpy.aggregate_ranks import create_rank_matrix
+from robustrankaggregpy.aggregate_ranks import (
+    create_rank_matrix,
+    q_stuart,
+    sum_stuart,
+    stuart,
+    FloatMatrix1D,
+    FloatMatrix2D,
+)
 
 
-def test_rank_matrix():
-    test_rank_lists = [
+# Create a Pytest fixture providing a common set of rank lists
+@pytest.fixture
+def rank_lists():
+    # glist <- list(
+    #   c("q", "o", "l", "m"),
+    #   c("i", "y", "g", "v", "o", "f", "r", "t", "j", "u"),
+    #   c("w", "n", "z", "k", "r", "x", "f", "g", "b", "t", "d", "o")
+    #   )
+    return [
         ["q", "o", "l", "m"],
         ["i", "y", "g", "v", "o", "f", "r", "t", "j", "u"],
         ["w", "n", "z", "k", "r", "x", "f", "g", "b", "t", "d", "o"],
     ]
+
+
+@pytest.fixture
+def rank_matrix(rank_lists):
+    return create_rank_matrix(rank_lists)
+
+
+def test_rank_matrix(rank_lists):
     # Test rank lists (based on RobustRankAggreg Example)
     test_full_rank_mat = pd.DataFrame(
         {
@@ -59,12 +84,8 @@ def test_rank_matrix():
             "d": [1.00, 1.00, 0.55],
         }
     ).T.sort_index()
-    actual_rank_mat_not_full = create_rank_matrix(
-        test_rank_lists, full=False
-    ).sort_index()
-    actual_rank_mat_full = create_rank_matrix(test_rank_lists, full=True).sort_index()
-    print(actual_rank_mat_not_full)
-    print(actual_rank_mat_full)
+    actual_rank_mat_not_full = create_rank_matrix(rank_lists, full=False).sort_index()
+    actual_rank_mat_full = create_rank_matrix(rank_lists, full=True).sort_index()
     # Check that the actual and test rank matrices are the same
     pd.testing.assert_frame_equal(
         test_not_full_rank_mat, actual_rank_mat_not_full, check_exact=False
@@ -72,3 +93,94 @@ def test_rank_matrix():
     pd.testing.assert_frame_equal(
         test_full_rank_mat, actual_rank_mat_full, check_exact=False
     )
+
+
+def test_sum_stuart():
+    test_v: FloatMatrix1D = cast(
+        FloatMatrix1D,
+        np.array(
+            [
+                0.8888889,
+                0.5555556,
+                0.2222222,
+                0.6666667,
+                0.5555556,
+                0.1111111,
+                0.3333333,
+                1.0000000,
+            ]
+        ),
+    )
+    test_r = 0.3
+    # Value based on RobustRankAggreg
+    expected_sum = 0.2853258
+    actual_sum = sum_stuart(test_v, test_r)
+    assert actual_sum == pytest.approx(expected_sum)
+
+
+def test_q_stuart(rank_matrix):
+    # Based on RobustRankAggreg implementation
+    # NOTE: This is after the rank matrix was sorted by index,
+    # and across the rows
+    expected_q_stuart = np.array(
+        [
+            0.833625,
+            0.908875,
+            0.27675,
+            0.223875,
+            0.142625,
+            0.833625,
+            0.488,
+            0.385875,
+            0.488,
+            0.271,
+            0.05425,
+            0.142625,
+            0.26125,
+            0.484,
+            0.875,
+            0.488,
+            0.142625,
+            0.657,
+            0.271,
+            0.385875,
+        ]
+    )
+    # Get the sorted rank matrix
+    sorted_rank_matrix: FloatMatrix2D = cast(
+        FloatMatrix2D,
+        np.apply_along_axis(np.sort, 1, rank_matrix.sort_index().to_numpy()),
+    )
+    for row_idx in range(sorted_rank_matrix.shape[0]):
+        row = cast(FloatMatrix1D, sorted_rank_matrix[row_idx, :])
+        actual_q_stuart = q_stuart(row)
+        assert actual_q_stuart == pytest.approx(expected_q_stuart[row_idx])
+
+
+def test_stuart(rank_matrix):
+    expected_stuart = np.array(
+        [
+            0.833625,
+            0.908875,
+            0.27675,
+            0.223875,
+            0.142625,
+            0.833625,
+            0.488,
+            0.385875,
+            0.488,
+            0.271,
+            0.05425,
+            0.142625,
+            0.26125,
+            0.484,
+            0.875,
+            0.488,
+            0.142625,
+            0.657,
+            0.271,
+            0.385875,
+        ]
+    )
+    actual_stuart = stuart(rank_matrix.sort_index().to_numpy())
+    np.testing.assert_almost_equal(actual_stuart, expected_stuart)
