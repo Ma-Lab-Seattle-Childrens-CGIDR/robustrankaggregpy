@@ -6,6 +6,7 @@ import pytest
 
 from robustrankaggregpy.aggregate_ranks import (
     beta_scores,
+    threshold_beta_score,
     create_rank_matrix,
     q_stuart,
     sum_stuart,
@@ -210,4 +211,51 @@ def test_beta_scores():
     # NOTE: Small floating point difference, increasing tolerance slightly
     np.testing.assert_allclose(
         beta_scores(rank_vector_na), expected_beta_na, rtol=1.1e-7
+    )
+
+
+def test_threshold_beta_scores():
+    scores_no_na = np.array([0.1, 0.4, 0.2, 0.01, 0.17, 0.25, 0.43])
+    scores_na = np.array(
+        [0.1, 0.4, 0.2, 0.01, 0.17, 0.25, 0.43, np.nan, np.nan, np.nan]
+    )
+    sigma_no_na = np.ones(scores_no_na.shape)
+    sigma_no_na.fill(0.5)
+    sigma_na = np.ones(scores_na.shape)
+    sigma_na.fill(0.5)
+
+    expected_thresholded_no_na = np.array(
+        [
+            0.067934652,
+            0.149694400,
+            0.100520069,
+            0.033344000,
+            0.012878418,
+            0.018841600,
+            0.002718186,
+        ]
+    )
+    expected_thresholded_na = np.array(
+        [
+            0.09561792,
+            0.26390107,
+            0.23413055,
+            0.12087388,
+            0.07812691,
+            0.16623862,
+            0.08057631,
+            1.00000000,
+            1.00000000,
+            1.00000000,
+        ]
+    )
+
+    np.testing.assert_allclose(
+        threshold_beta_score(scores=scores_no_na, sigma=sigma_no_na),
+        expected_thresholded_no_na,
+    )
+
+    np.testing.assert_allclose(
+        threshold_beta_score(scores=scores_na, sigma=sigma_na),
+        expected_thresholded_na,
     )

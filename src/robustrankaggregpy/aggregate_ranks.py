@@ -80,6 +80,7 @@ def create_rank_matrix(
 # Define some useful Types
 FloatMatrix1D = np.ndarray[Tuple[int], np.dtype[np.float32 | np.float64]]
 FloatMatrix2D = np.ndarray[Tuple[int, int], np.dtype[np.float32 | np.float64]]
+IntMatrix1D = np.ndarray[Tuple[int], np.dtype[int]]
 
 
 def sum_stuart(v: FloatMatrix1D, r: float) -> float:
@@ -179,7 +180,7 @@ def beta_scores(rank_vector: FloatMatrix1D) -> FloatMatrix1D:
 
 def threshold_beta_score(
     scores: FloatMatrix1D,
-    k: Optional[FloatMatrix1D] = None,
+    k: Optional[IntMatrix1D] = None,
     n: Optional[int] = None,
     sigma: Optional[FloatMatrix1D] = None,
 ):
@@ -190,7 +191,7 @@ def threshold_beta_score(
     ----------
     scores : FloatMatrix1D
         Beta scores to threshold
-    k : FloatMatrix1D, optional
+    k : IntMatrix1D, optional
     n : int, optional
     sigma : FloatMatrix1D, optional
 
@@ -200,7 +201,7 @@ def threshold_beta_score(
         The thresholded beta scores
     """
     if k is None:
-        k: FloatMatrix1D = np.arange(scores.shape[0], dtype=scores.dtype) + 1
+        k: IntMatrix1D = np.arange(scores.shape[0], dtype=int) + 1
     if n is None:
         n = scores.shape[0]
     if sigma is None:
@@ -219,7 +220,7 @@ def threshold_beta_score(
         raise ValueError(
             f"Elements of sigma must be in rane [0,1], but actual range was [{np.min(sigma)},{np.max(sigma)}]"
         )
-    if any(~np.isnan(scores) & scores > sigma):
+    if any((~np.isnan(scores)) & (scores > sigma)):
         raise ValueError("Elements of scores must be smaller than elements of sigma")
 
     # Get a vector with no NaN
@@ -229,7 +230,39 @@ def threshold_beta_score(
     # Create the thresholded beta vector, filled with NaNs for now
     beta: FloatMatrix1D = np.empty((len(k)), dtype=scores.dtype)
     beta.fill(np.nan)
-    _ = x
+    # For each value of K
+    for idx in range(len(k)):
+        if k[idx] > n:
+            beta[idx] = 0
+            continue
+        if k[idx] > len(x):
+            beta[idx] = 1
+            continue
+        if sigma[n - 1] >= x[k[idx] - 1]:
+            beta[idx] = stats.beta.cdf(x[k[idx] - 1], k[idx], n + 1 - k[idx])
+            continue
+
+        # Find the last element such that sigma[n0] <= x[k[idx]]
+        n0 = np.searchsorted(sigma, x[k[idx] - 1], side="left")
+
+        # Compute beta(n,k) for n=n0 and k=1..k[idx]
+        b = np.zeros((k[idx],), dtype=scores.dtype)
+        b[0] = 1.0
+        if n0 == 0:
+            pass
+        elif k[idx] > n0:
+            a_param = np.arange(1, n0 + 1)
+            b[1:n0] = stats.beta.cdf(x[k[idx] - 1], a_param, np.flip(a_param))
+        else:
+            a_param = np.arange(1, k[idx])
+            b_param = n0 + 2 - a_param
+            b[1:] = stats.beta.cdf(x[k[idx] - 1], a_param, b_param)
+
+        z = sigma[(n0 + 1) : n + 1]
+        for j in range(n - n0):
+            b[1 : (k[idx])] = (1 - z[j]) * b[1 : k[idx]] + z[j] * b[0 : k[idx] - 1]
+        beta[idx] = b[k[idx]]
+    return beta
 
 
 # endregion RRA
