@@ -11,6 +11,7 @@ from robustrankaggregpy.aggregate_ranks import (
     q_stuart,
     sum_stuart,
     stuart,
+    rho_scores,
     FloatMatrix1D,
     FloatMatrix2D,
 )
@@ -215,9 +216,12 @@ def test_beta_scores():
 
 
 def test_threshold_beta_scores():
-    scores_no_na = np.array([0.1, 0.4, 0.2, 0.01, 0.17, 0.25, 0.43])
-    scores_na = np.array(
-        [0.1, 0.4, 0.2, 0.01, 0.17, 0.25, 0.43, np.nan, np.nan, np.nan]
+    scores_no_na: FloatMatrix1D = cast(
+        FloatMatrix1D, np.array([0.1, 0.4, 0.2, 0.01, 0.17, 0.25, 0.43])
+    )
+    scores_na: FloatMatrix1D = cast(
+        FloatMatrix1D,
+        np.array([0.1, 0.4, 0.2, 0.01, 0.17, 0.25, 0.43, np.nan, np.nan, np.nan]),
     )
     sigma_no_na = np.ones(scores_no_na.shape)
     sigma_no_na.fill(0.5)
@@ -259,3 +263,54 @@ def test_threshold_beta_scores():
         threshold_beta_score(scores=scores_na, sigma=sigma_na),
         expected_thresholded_na,
     )
+
+
+def test_rho_scores():
+    test_r1: FloatMatrix1D = cast(
+        FloatMatrix1D,
+        np.array(
+            [
+                0.07919443,
+                0.34070727,
+                0.04911215,
+                0.57717496,
+                0.22727211,
+                0.37171813,
+                0.85979700,
+                0.86185242,
+                0.08082894,
+                0.90504901,
+                0.03027985,
+                0.51429599,
+                0.88828221,
+                0.75317915,
+                0.99846283,
+            ]
+        ),
+    )
+    test_r2: FloatMatrix1D = cast(
+        FloatMatrix1D,
+        np.array(
+            [
+                0.200770238,
+                0.889720872,
+                0.787357739,
+                0.927841279,
+                0.019845115,
+                0.677542569,
+                0.224317168,
+                0.254374503,
+                0.309581592,
+                0.719109173,
+                0.124438156,
+                0.031504511,
+                0.031702428,
+                0.036366031,
+                0.003931667,
+            ]
+        ),
+    )
+    expected_rho_1 = 0.4237422
+    expected_tho_2 = 0.002108783
+    assert rho_scores(test_r1) == pytest.approx(expected_rho_1)
+    assert rho_scores(test_r2) == pytest.approx(expected_tho_2)

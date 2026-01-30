@@ -265,4 +265,33 @@ def threshold_beta_score(
     return beta
 
 
+def correct_beta_pvalues(pvalues: FloatMatrix1D, k: int) -> float:
+    return min(np.min(pvalues * k), 1.0)
+
+
+def correct_beta_pvalues_exact(pvalues: FloatMatrix1D, k: int) -> float:
+    rm = np.empty((len(pvalues), k), dtype=pvalues.dtype)
+    a = np.arange(1, k + 1, dtype=int)
+    b = np.flip(a)
+    for idx, p in pvalues:
+        rm[idx, :] = stats.beta.ppf(p, a=a, b=b)
+    return 1 - stuart(1 - rm)
+
+
+def rho_scores(
+    r: FloatMatrix1D, top_cutoff: Optional[FloatMatrix1D] = None, exact: bool = False
+):
+    if top_cutoff is None:
+        x = beta_scores(r)
+    else:
+        r = r[~np.isnan(r)]
+        r[r == 1.0] = np.nan
+        x = threshold_beta_score(r, sigma=top_cutoff)
+    if exact:
+        rho = correct_beta_pvalues_exact(np.nanmin(x), np.sum(~np.isnan(x)))
+    else:
+        rho = correct_beta_pvalues(np.nanmin(x), np.sum(~np.isnan(x)))
+    return rho
+
+
 # endregion RRA
