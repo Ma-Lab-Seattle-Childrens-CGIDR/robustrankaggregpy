@@ -322,7 +322,7 @@ def aggregate_ranks(
     rank_lists: Optional[list[list[Hashable]]] = None,
     rank_matrix: Optional[pd.DataFrame] = None,
     ranked_elements: Optional[int] = None,
-    method: Literal["RRA"] = "RRA",
+    method: Literal["rra", "min", "geom-mean", "mean", "median", "stuart"] = "rra",
     full: bool = False,
     exact: bool = False,
     top_cutoff: Optional[FloatMatrix1D | np.typing.ArrayLike] = None,

@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from robustrankaggregpy.aggregate_ranks import (
+    aggregate_ranks,
     beta_scores,
     threshold_beta_score,
     create_rank_matrix,
@@ -314,3 +315,40 @@ def test_rho_scores():
     expected_tho_2 = 0.002108783
     assert rho_scores(test_r1) == pytest.approx(expected_rho_1)
     assert rho_scores(test_r2) == pytest.approx(expected_tho_2)
+
+
+def test_aggregate_ranks():
+    rank_lists = [
+        ["u", "f", "c", "w"],
+        ["h", "f", "j", "y", "e", "q", "p", "k", "r", "v"],
+        ["q", "e", "f", "d", "k", "c", "x", "j", "m", "r", "t", "z"],
+    ]
+    ranked_elements = 26
+
+    # RRA aggregation
+    expected_rra = pd.Series(
+        {
+            "f": 0.004608557,
+            "e": 0.290168411,
+            "u": 0.333010924,
+            "h": 0.333010924,
+            "q": 0.333010924,
+            "c": 0.405553027,
+            "j": 0.677287210,
+            "k": 0.677287210,
+            "r": 0.989986345,
+            "w": 1.000000000,
+            "y": 1.000000000,
+            "p": 1.000000000,
+            "v": 1.000000000,
+            "d": 1.000000000,
+            "x": 1.000000000,
+            "m": 1.000000000,
+            "t": 1.000000000,
+            "z": 1.000000000,
+        }
+    )
+    actual_rra = aggregate_ranks(rank_lists=rank_lists, ranked_elements=ranked_elements)
+    pd.testing.assert_series_equal(
+        expected_rra, actual_rra, check_exact=False, check_like=True
+    )
