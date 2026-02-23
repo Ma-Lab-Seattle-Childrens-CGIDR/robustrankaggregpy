@@ -1,15 +1,18 @@
 [project]
 name = "robustrankaggregpy"
-version = "0.1.0"
+version = "0.2.0"
 description = "Implementation of the Robust Rank Aggregation R package in Python"
 readme = "README.md"
 authors = [{ name = "Braden Griebel", email = "bgriebel@uw.edu" }]
 requires-python = ">=3.10"
-dependencies = [
-    "numpy>=2.2.6",
-    "pandas>=2.3.3",
-    "scipy>=1.15.3",
-]
+dependencies = ["numpy>=2.2.6", "pandas>=2.3.3", "scipy>=1.15.3"]
+
+[project.urls]
+Homepage = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/robustrankaggregpy"
+Repository = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/robustrankaggregpy"
+Documentation = "https://robustrankaggregpy.readthedocs.io/en/latest/"
+Issues = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/robustrankaggregpy/issues"
+Changelog = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/robustrankaggregpy/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["uv_build>=0.9.18,<0.10.0"]
@@ -17,13 +20,10 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.2",
-    "ruff>=0.14.14",
-    "ty>=0.0.14",
-    "pandas-stubs~=2.3.3",
-    "scipy-stubs>=1.15.3.0",
+  "pytest>=9.0.2",
+  "ruff>=0.14.14",
+  "ty>=0.0.14",
+  "pandas-stubs~=2.3.3",
+  "scipy-stubs>=1.15.3.0",
 ]
-docs = [
-    "sphinx>=8.1.3",
-    "sphinx-rtd-theme>=3.1.0",
-]
+docs = ["sphinx>=8.1.3", "sphinx-rtd-theme>=3.1.0"]
