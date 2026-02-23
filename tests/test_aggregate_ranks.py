@@ -7,6 +7,7 @@ import pytest
 from robustrankaggregpy.aggregate_ranks import (
     beta_scores,
     create_rank_matrix,
+    rank_matrix_from_df,
     q_stuart,
     sum_stuart,
     stuart,
@@ -33,6 +34,65 @@ def rank_lists():
 @pytest.fixture
 def rank_matrix(rank_lists):
     return create_rank_matrix(rank_lists)
+
+
+def test_rank_matrix_from_df():
+    test_data = pd.DataFrame(
+        {
+            "A": [1, 2, 3, 4, 5],
+            "B": [2, 1, np.nan, 4, 3],
+            "C": [3, 3, 2, np.nan, np.nan],
+        },
+        index=pd.Index(["a", "b", "c", "d", "e"]),
+    )
+    expected_not_full_ascending = pd.DataFrame(
+        {
+            "A": [0.2, 0.4, 0.6, 0.8, 1.0],
+            "B": [0.4, 0.2, 1.0, 0.8, 0.6],
+            "C": [0.6, 0.6, 0.2, 1.0, 1.0],
+        },
+        index=pd.Index(["a", "b", "c", "d", "e"]),
+    )
+    expected_full_ascending = pd.DataFrame(
+        {
+            "A": [0.2, 0.4, 0.6, 0.8, 1.0],
+            "B": [0.4, 0.2, np.nan, 0.8, 0.6],
+            "C": [0.6, 0.6, 0.2, np.nan, np.nan],
+        },
+        index=pd.Index(["a", "b", "c", "d", "e"]),
+    )
+    expected_not_full_not_ascending = pd.DataFrame(
+        {
+            "A": [1.0, 0.8, 0.6, 0.4, 0.2],
+            "B": [0.6, 0.8, 1.0, 0.2, 0.4],
+            "C": [0.4, 0.4, 0.6, 1.0, 1.0],
+        },
+        index=pd.Index(["a", "b", "c", "d", "e"]),
+    )
+    expected_full_not_ascending = pd.DataFrame(
+        {
+            "A": [1.0, 0.8, 0.6, 0.4, 0.2],
+            "B": [0.6, 0.8, np.nan, 0.2, 0.4],
+            "C": [0.4, 0.4, 0.6, np.nan, np.nan],
+        },
+        index=pd.Index(["a", "b", "c", "d", "e"]),
+    )
+    pd.testing.assert_frame_equal(
+        expected_not_full_ascending,
+        rank_matrix_from_df(test_data, full=False, ascending=True),
+    )
+    pd.testing.assert_frame_equal(
+        expected_full_ascending,
+        rank_matrix_from_df(test_data, full=True, ascending=True),
+    )
+    pd.testing.assert_frame_equal(
+        expected_not_full_not_ascending,
+        rank_matrix_from_df(test_data, full=False, ascending=False),
+    )
+    pd.testing.assert_frame_equal(
+        expected_full_not_ascending,
+        rank_matrix_from_df(test_data, full=True, ascending=False),
+    )
 
 
 def test_rank_matrix(rank_lists):

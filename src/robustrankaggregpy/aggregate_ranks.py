@@ -3,11 +3,71 @@ Functions for performing rank aggregation
 """
 
 from functools import reduce
-from typing import cast, Hashable, Optional, Tuple
+from typing import cast, Hashable, Literal, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from scipy import special, stats
+
+
+def rank_matrix_from_df(
+    data: pd.DataFrame,
+    total_elems: Optional[int | list[int] | pd.Series] = None,
+    full: bool = False,
+    ascending=False,
+    rank_method: Literal["average", "min", "max", "first", "dense"] = "max",
+    **kwargs,
+):
+    """
+    Create a rank matrix by ranking data in a DataFrame
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The data to create a rank matrix from. The columns
+        will be treated as the different rank lists.
+    total_elems : int or list of int, optional
+        The total number of elements being ranked, if not provided
+        will use the number of rows in the dataframe.
+        If a single int, that is used as the total number of elements for
+        all the lists, if a list should be the same length as the number of columns,
+        and each column will have a different total number of elements specified.
+        If a Series will be used directly to divide the columns to scale the ranks.
+    full : bool, default=False
+        Whether the ranks are complete. If True treats the maximally ranked element
+        in each column as the maximum possible rank, and missing data will be
+        given a scaled rank of NaN. If False, all missing values will
+        be treated as having the maximum possible rank.
+    ascending : bool, default=False
+        Whether the values should be ranked in ascending order. If True,
+        smaller data values will be given lower ranks.
+    rank_method : {'average', 'min', 'max', 'first', 'dense'}, default='max'
+        Method to use for ranking ties, see
+        `Pandas rank function <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.rank.html>`_
+        for details
+    kwargs
+        Keyword arguments passed to pandas rank function
+    """
+    rank_mat = data.rank(
+        method=rank_method, ascending=ascending, na_option="keep", **kwargs
+    )
+    # Scale the ranks
+    if total_elems is None:
+        scale_series = pd.Series(data.shape[0], index=data.columns)
+    elif isinstance(total_elems, list) or isinstance(total_elems, int):
+        scale_series = pd.Series(total_elems, index=data.columns)
+    elif isinstance(total_elems, pd.Series):
+        scale_series = total_elems
+    else:
+        raise ValueError(
+            f"Invalid value for total_elems, expected int, "
+            f"list, Series or None but received {type(total_elems)}"
+        )
+
+    rank_mat = rank_mat.div(scale_series, axis="columns")
+    if not full:
+        rank_mat = rank_mat.replace(np.nan, 1.0)
+    return rank_mat
 
 
 def create_rank_matrix(
@@ -29,7 +89,7 @@ def create_rank_matrix(
         If a single int, that is used as the total number of elements for
         all the lists, if a list should be the same length as rank_lists, and
         each list will have a different total number of elements specified.
-    full : bool, default=True
+    full : bool, default=False
         Whether the given ranks are complete
 
     Returns
