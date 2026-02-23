@@ -5,12 +5,15 @@ import pandas as pd
 import pytest
 
 from robustrankaggregpy.aggregate_ranks import (
+    aggregate_ranks,
     beta_scores,
+    threshold_beta_score,
     create_rank_matrix,
     rank_matrix_from_df,
     q_stuart,
     sum_stuart,
     stuart,
+    rho_scores,
     FloatMatrix1D,
     FloatMatrix2D,
 )
@@ -270,4 +273,142 @@ def test_beta_scores():
     # NOTE: Small floating point difference, increasing tolerance slightly
     np.testing.assert_allclose(
         beta_scores(rank_vector_na), expected_beta_na, rtol=1.1e-7
+    )
+
+
+def test_threshold_beta_scores():
+    scores_no_na: FloatMatrix1D = cast(
+        FloatMatrix1D, np.array([0.1, 0.4, 0.2, 0.01, 0.17, 0.25, 0.43])
+    )
+    scores_na: FloatMatrix1D = cast(
+        FloatMatrix1D,
+        np.array([0.1, 0.4, 0.2, 0.01, 0.17, 0.25, 0.43, np.nan, np.nan, np.nan]),
+    )
+    sigma_no_na = np.ones(scores_no_na.shape)
+    sigma_no_na.fill(0.5)
+    sigma_na = np.ones(scores_na.shape)
+    sigma_na.fill(0.5)
+
+    expected_thresholded_no_na = np.array(
+        [
+            0.067934652,
+            0.149694400,
+            0.100520069,
+            0.033344000,
+            0.012878418,
+            0.018841600,
+            0.002718186,
+        ]
+    )
+    expected_thresholded_na = np.array(
+        [
+            0.09561792,
+            0.26390107,
+            0.23413055,
+            0.12087388,
+            0.07812691,
+            0.16623862,
+            0.08057631,
+            1.00000000,
+            1.00000000,
+            1.00000000,
+        ]
+    )
+
+    np.testing.assert_allclose(
+        threshold_beta_score(scores=scores_no_na, sigma=sigma_no_na),
+        expected_thresholded_no_na,
+    )
+
+    np.testing.assert_allclose(
+        threshold_beta_score(scores=scores_na, sigma=sigma_na),
+        expected_thresholded_na,
+    )
+
+
+def test_rho_scores():
+    test_r1: FloatMatrix1D = cast(
+        FloatMatrix1D,
+        np.array(
+            [
+                0.07919443,
+                0.34070727,
+                0.04911215,
+                0.57717496,
+                0.22727211,
+                0.37171813,
+                0.85979700,
+                0.86185242,
+                0.08082894,
+                0.90504901,
+                0.03027985,
+                0.51429599,
+                0.88828221,
+                0.75317915,
+                0.99846283,
+            ]
+        ),
+    )
+    test_r2: FloatMatrix1D = cast(
+        FloatMatrix1D,
+        np.array(
+            [
+                0.200770238,
+                0.889720872,
+                0.787357739,
+                0.927841279,
+                0.019845115,
+                0.677542569,
+                0.224317168,
+                0.254374503,
+                0.309581592,
+                0.719109173,
+                0.124438156,
+                0.031504511,
+                0.031702428,
+                0.036366031,
+                0.003931667,
+            ]
+        ),
+    )
+    expected_rho_1 = 0.4237422
+    expected_tho_2 = 0.002108783
+    assert rho_scores(test_r1) == pytest.approx(expected_rho_1)
+    assert rho_scores(test_r2) == pytest.approx(expected_tho_2)
+
+
+def test_aggregate_ranks():
+    rank_lists = [
+        ["u", "f", "c", "w"],
+        ["h", "f", "j", "y", "e", "q", "p", "k", "r", "v"],
+        ["q", "e", "f", "d", "k", "c", "x", "j", "m", "r", "t", "z"],
+    ]
+    ranked_elements = 26
+
+    # RRA aggregation
+    expected_rra = pd.Series(
+        {
+            "f": 0.004608557,
+            "e": 0.290168411,
+            "u": 0.333010924,
+            "h": 0.333010924,
+            "q": 0.333010924,
+            "c": 0.405553027,
+            "j": 0.677287210,
+            "k": 0.677287210,
+            "r": 0.989986345,
+            "w": 1.000000000,
+            "y": 1.000000000,
+            "p": 1.000000000,
+            "v": 1.000000000,
+            "d": 1.000000000,
+            "x": 1.000000000,
+            "m": 1.000000000,
+            "t": 1.000000000,
+            "z": 1.000000000,
+        }
+    )
+    actual_rra = aggregate_ranks(rank_lists=rank_lists, ranked_elements=ranked_elements)
+    pd.testing.assert_series_equal(
+        expected_rra, actual_rra, check_exact=False, check_like=True
     )
