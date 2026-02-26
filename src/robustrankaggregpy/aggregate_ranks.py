@@ -3,7 +3,7 @@ Functions for performing rank aggregation
 """
 
 from functools import reduce
-from typing import cast, Hashable, Literal, Optional, Tuple
+from typing import cast, Hashable, Literal, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from scipy import special, stats
 
 def rank_matrix_from_df(
     data: pd.DataFrame,
-    total_elems: Optional[int | list[int] | pd.Series] = None,
+    total_elems: Optional[Union[int, list[int], pd.Series]] = None,
     full: bool = False,
     ascending=False,
     rank_method: Literal["average", "min", "max", "first", "dense"] = "max",
@@ -72,7 +72,7 @@ def rank_matrix_from_df(
 
 def create_rank_matrix(
     rank_lists: list[list[Hashable]],
-    ranked_elements: Optional[int | list[int]] = None,
+    ranked_elements: Optional[Union[int, list[int]]] = None,
     full: bool = False,
 ) -> pd.DataFrame:
     """
@@ -138,9 +138,9 @@ def create_rank_matrix(
 # should be a way to memoize that...
 
 # Define some useful Types
-FloatMatrix1D = np.ndarray[Tuple[int], np.dtype[np.float32 | np.float64]]
-FloatMatrix2D = np.ndarray[Tuple[int, int], np.dtype[np.float32 | np.float64]]
-IntMatrix1D = np.ndarray[Tuple[int], np.dtype[np.int32 | np.int64]]
+FloatMatrix1D = np.ndarray[Tuple[int], np.dtype[Union[np.float32, np.float64]]]
+FloatMatrix2D = np.ndarray[Tuple[int, int], np.dtype[Union[np.float32, np.float64]]]
+IntMatrix1D = np.ndarray[Tuple[int], np.dtype[Union[np.int32, np.int64]]]
 
 
 def sum_stuart(v: FloatMatrix1D, r: float) -> float:
@@ -385,7 +385,7 @@ def aggregate_ranks(
     method: Literal["rra", "min", "geom-mean", "mean", "median", "stuart"] = "rra",
     full: bool = False,
     exact: bool = False,
-    top_cutoff: Optional[FloatMatrix1D | np.typing.ArrayLike] = None,
+    top_cutoff: Optional[Union[FloatMatrix1D, np.typing.ArrayLike]] = None,
 ) -> pd.Series:
     """
     Aggregate ranked lists
@@ -442,35 +442,34 @@ def aggregate_ranks(
         ranked_elements = len(rank_matrix.index)
     # Get the numpy array representing the rank matrix
     rank_matrix_array = rank_matrix.to_numpy()
-    match method:
-        case "min":
-            aggregated_matrix = np.apply_along_axis(np.nanmin, 1, rank_matrix_array)
-        case "median":
-            aggregated_matrix = np.apply_along_axis(np.nanmedian, 1, rank_matrix_array)
-        case "mean":
-            # The RobustRankAggreg library calculates a probability here
-            # using a CLT approximation of a sum of normals
-            # I don't think this adds a lot, and it conflicts with
-            # the other methods (like median, min, etc.)
-            # So I am currently removing it, but may be added back later as
-            # an option
-            aggregated_matrix = np.apply_along_axis(np.nanmean, 1, rank_matrix_array)
-        case "geom-mean":
-            aggregated_matrix = np.apply_along_axis(
-                stats.gmean, 1, rank_matrix_array, nan_policy="omit"
-            )
-        case "rra":
-            aggregated_matrix = np.apply_along_axis(
-                rho_scores, 1, rank_matrix_array, top_cutoff=top_cutoff, exact=exact
-            )
-        case "stuart":
-            aggregated_matrix = stuart(rank_matrix_array)
-        case _:
-            raise ValueError(
-                f"Invalid method, expected one of 'min', "
-                f"'median', 'mean', 'geom-mean', 'stuart', or 'rra',"
-                f"but reveived {method}"
-            )
+    if method == "min":
+        aggregated_matrix = np.apply_along_axis(np.nanmin, 1, rank_matrix_array)
+    elif method == "median":
+        aggregated_matrix = np.apply_along_axis(np.nanmedian, 1, rank_matrix_array)
+    elif method == "mean":
+        # The RobustRankAggreg library calculates a probability here
+        # using a CLT approximation of a sum of normals
+        # I don't think this adds a lot, and it conflicts with
+        # the other methods (like median, min, etc.)
+        # So I am currently removing it, but may be added back later as
+        # an option
+        aggregated_matrix = np.apply_along_axis(np.nanmean, 1, rank_matrix_array)
+    elif method == "geom-mean":
+        aggregated_matrix = np.apply_along_axis(
+            stats.gmean, 1, rank_matrix_array, nan_policy="omit"
+        )
+    elif method == "rra":
+        aggregated_matrix = np.apply_along_axis(
+            rho_scores, 1, rank_matrix_array, top_cutoff=top_cutoff, exact=exact
+        )
+    elif method == "stuart":
+        aggregated_matrix = stuart(rank_matrix_array)
+    else:
+        raise ValueError(
+            f"Invalid method, expected one of 'min', "
+            f"'median', 'mean', 'geom-mean', 'stuart', or 'rra',"
+            f"but reveived {method}"
+        )
     return pd.Series(aggregated_matrix, index=rank_matrix.index).sort_values(
         ascending=True
     )

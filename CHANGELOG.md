@@ -1,5 +1,9 @@
 # Changelog
 
+## Release 0.3.0
+
+- Added support for python 3.9
+
 ## Release 0.2.0
 
 - Added method for converting a dataframe containing values into a rank matrix

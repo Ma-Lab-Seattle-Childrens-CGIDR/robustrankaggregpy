@@ -1,11 +1,11 @@
 [project]
 name = "robustrankaggregpy"
-version = "0.2.0"
+version = "0.3.0"
 description = "Implementation of the Robust Rank Aggregation R package in Python"
 readme = "README.md"
 authors = [{ name = "Braden Griebel", email = "bgriebel@uw.edu" }]
-requires-python = ">=3.10"
-dependencies = ["numpy>=2.2.6", "pandas>=2.3.3", "scipy>=1.15.3"]
+requires-python = ">=3.9"
+dependencies = ["numpy>=2.0", "pandas>=2.2", "scipy>=1.12"]
 
 [project.urls]
 Homepage = "https://github.com/Ma-Lab-Seattle-Childrens-CGIDR/robustrankaggregpy"
@@ -20,7 +20,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-  "pytest>=9.0.2",
+  "pytest>=8.0.1",
   "ruff>=0.14.14",
   "ty>=0.0.14",
   "pandas-stubs~=2.3.3",
